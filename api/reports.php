@@ -20,18 +20,17 @@ if ($method === 'GET') {
         $from = $_GET['from'] ?? null;
         $to   = $_GET['to']   ?? null;
 
-        $sql    = "SELECT * FROM reports WHERE status != 'pending'";
         $params = [];
+        $action = $_GET['action'] ?? '';
 
-        if (isset($_GET['stats'])) {
-    $sql    = "SELECT * FROM reports";
-    $params = [];
-} else {
-    $sql    = "SELECT * FROM reports WHERE status != 'pending'";
-    $params = [];
-}
+        // action=get_all atau stats=1 → admin, ambil semua termasuk pending & ditolak
+        if ($action === 'get_all' || isset($_GET['stats'])) {
+            $sql = "SELECT * FROM reports WHERE 1=1";
+        } else {
+            $sql = "SELECT * FROM reports WHERE status != 'pending' AND status != 'ditolak'";
+        }
 
-        if ($status !== 'all' && in_array($status, ['damaged','in_progress','fixed','reported'])) {
+        if ($status !== 'all' && in_array($status, ['pending','damaged','in_progress','fixed','reported','ditolak'])) {
             $sql     .= " AND status = :status";
             $params[':status'] = $status;
         }

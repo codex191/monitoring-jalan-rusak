@@ -80,7 +80,7 @@
       if (from)   params.set('from',   from);
       if (to)     params.set('to',     to);
       if (search) params.set('search', search);
-      const data = await req(`${BASE}/admin.php?${params}`);
+      const data = await req(`${BASE}/reports.php?${params}`);
       return data.data;
     },
 
