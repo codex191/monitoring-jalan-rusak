@@ -1,0 +1,17 @@
+# Lindungi folder config & uploads dari akses langsung
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Blokir akses langsung ke config/
+    RewriteRule ^config/ - [F,L]
+
+    # Blokir akses listing folder
+    Options -Indexes
+</IfModule>
+
+# Lindungi file .php di folder config
+<FilesMatch "^(database|cors)\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>

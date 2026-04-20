@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detail Laporan — Pantau Jalan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: var(--space-6);
+      align-items: start;
+    }
+    .detail-main { display: flex; flex-direction: column; gap: var(--space-4); }
+    .detail-side { display: flex; flex-direction: column; gap: var(--space-4); }
+
+    /* Hero foto */
+    .photo-hero {
+      position: relative;
+      width: 100%;
+      background: var(--color-surface-offset);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      border: 1px solid rgba(40,37,29,0.1);
+    }
+    .photo-hero img {
+      width: 100%; max-height: 420px; object-fit: cover; display: block;
+    }
+    .photo-hero .no-photo {
+      height: 220px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--space-3);
+      color: var(--color-text-faint);
+      font-size: var(--text-sm);
+    }
+    .photo-hero .no-photo-icon { font-size: 3rem; }
+    .photo-strip {
+      display: flex;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      overflow-x: auto;
+      border-top: 1px solid var(--color-divider);
+      background: var(--color-surface);
+    }
+    .photo-strip-thumb {
+      width: 60px; height: 60px; flex-shrink: 0;
+      border-radius: var(--radius-md); overflow: hidden;
+      border: 2px solid transparent; cursor: pointer;
+      transition: border-color var(--transition);
+      background: var(--color-surface-offset);
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-xs); color: var(--color-text-faint);
+    }
+    .photo-strip-thumb.active { border-color: var(--color-primary); }
+    .photo-strip-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Info rows */
+    .info-table { width: 100%; border-collapse: collapse; }
+    .info-table tr td { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); font-size: var(--text-sm); }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table td:first-child { color: var(--color-text-muted); width: 40%; font-weight: 600; }
+    .info-table td:last-child { font-weight: 500; }
+
+    /* Riwayat status (timeline) */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-item {
+      display: flex; gap: var(--space-4);
+      padding: var(--space-3) 0;
+      position: relative;
+    }
+    .timeline-item:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 19px; top: 44px;
+      width: 2px; bottom: 0;
+      background: var(--color-divider);
+    }
+    .timeline-dot {
+      width: 40px; height: 40px; flex-shrink: 0;
+      border-radius: var(--radius-full);
+      display: grid; place-items: center;
+      font-size: 1.1rem;
+      border: 3px solid var(--color-bg);
+      box-shadow: 0 0 0 2px var(--color-divider);
+      z-index: 1;
+    }
+    .timeline-content { flex: 1; padding-top: 0.5rem; }
+    .timeline-content strong { display: block; font-size: var(--text-sm); margin-bottom: 2px; }
+    .timeline-content small { color: var(--color-text-muted); font-size: var(--text-xs); }
+
+    /* Detail map */
+    #detail-map {
+      width: 100%; height: 220px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid rgba(40,37,29,0.1);
+    }
+
+    /* Back button area */
+    .breadcrumb {
+      display: flex; align-items: center; gap: var(--space-2);
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      margin-bottom: var(--space-5);
+    }
+    .breadcrumb a { color: var(--color-primary); font-weight: 600; }
+    .breadcrumb span { color: var(--color-text-faint); }
+
+    /* Not found state */
+    .not-found {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: var(--space-16);
+      gap: var(--space-4);
+    }
+    .not-found h2 { font-size: var(--text-xl); font-weight: 800; }
+    .not-found p { color: var(--color-text-muted); max-width: 40ch; }
+
+    @media (max-width: 900px) {
+      .detail-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <script>
+    (function(){
+      var t = document.querySelector('[data-theme-toggle]');
+      var r = document.documentElement;
+      var d = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+      r.setAttribute('data-theme', d);
+      if (t) {
+        t.innerHTML = d === 'dark'
+          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        t.addEventListener('click', function(){
+          d = d === 'dark' ? 'light' : 'dark';
+          r.setAttribute('data-theme', d);
+          localStorage.setItem('theme', d);
+          t.innerHTML = d === 'dark'
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        });
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="topnav" aria-label="Navigasi utama">
+      <a href="index.html" class="nav-brand" aria-label="Pantau Jalan beranda">
+        <div class="logo-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h3l-1 5 2 5-2 5 1 5H7L6 17l1-5-1-5 1-5Z"/><path d="M14 2h3l-1 5 2 5-2 5 1 5h-3l-1-5 1-5-1-5 1-5Z"/></svg>
+        </div>
+        Pantau Jalan
+      </a>
+      <div class="nav-links">
+        <a href="index.html"><span class="label">Dashboard</span></a>
+        <a href="peta.html"><span class="label">Peta</span></a>
+        <a href="laporan.html"><span class="label">Kirim Laporan</span></a>
+        <a href="admin.html"><span class="label">Admin</span></a>
+      </div>
+      <div class="nav-end">
+        <button class="theme-toggle" data-theme-toggle aria-label="Ganti tema">🌙</button>
+      </div>
+    </nav>
+
+    <main class="page-content" id="main-content">
+      <!-- Diisi oleh JS -->
+    </main>
+  </div>
+
+  <script src="assets/store.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/nav.js"></script>
+  <script src="assets/utils.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    initTheme(); initNav(); initMobileNav();
+    OfflineIndicator.init();
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    const main = document.getElementById('main-content');
+
+    function renderNotFound() {
+      main.innerHTML = `
+        <div class="not-found">
+          <div style="font-size:3rem;">🔍</div>
+          <h2>Laporan tidak ditemukan</h2>
+          <p>ID laporan tidak valid atau laporan sudah dihapus.</p>
+          <a href="index.html" class="btn btn-primary">Kembali ke Dashboard</a>
+        </div>
+      `;
+    }
+
+    function renderDetail(item) {
+      const meta = Store.statusMeta[item.status] ?? { label: item.status, color: '#7a7974', icon: '⚪' };
+      const gmapsUrl = `https://www.google.com/maps?q=${item.lat},${item.lng}`;
+
+      // Foto
+      const hasPhotos = item.photo_urls && item.photo_urls.length > 0;
+      const photoHeroHTML = hasPhotos
+        ? `
+          <div class="photo-hero">
+            <img id="main-photo" src="https://picsum.photos/seed/${item.id}road/800/420" alt="Foto utama ${item.roadName}" width="800" height="420" loading="lazy" />
+            ${item.photo_urls.length > 1 ? `
+            <div class="photo-strip">
+              ${item.photo_urls.map((p, i) => `
+                <div class="photo-strip-thumb ${i === 0 ? 'active' : ''}" data-src="https://picsum.photos/seed/${item.id}road${i}/800/420" role="button" tabindex="0" aria-label="Foto ${i+1}: ${p}">
+                  <img src="https://picsum.photos/seed/${item.id}road${i}/120/120" alt="${p}" width="60" height="60" loading="lazy" />
+                </div>
+              `).join('')}
+            </div>` : ''}
+          </div>`
+        : `
+          <div class="photo-hero">
+            <div class="no-photo">
+              <div class="no-photo-icon">📷</div>
+              <span>Belum ada foto untuk laporan ini</span>
+              <a href="laporan.html" class="btn btn-secondary" style="margin-top:var(--space-2);">+ Tambah foto</a>
+            </div>
+          </div>`;
+
+      // Timeline riwayat status
+      const historyHTML = (item.history && item.history.length > 0)
+        ? item.history.map(h => {
+            const hMeta = Store.statusMeta[h.status] ?? { icon: '⚪', label: h.status, color: '#7a7974' };
+            return `
+              <div class="timeline-item">
+                <div class="timeline-dot" style="background:${hMeta.color}22;" aria-hidden="true">${hMeta.icon}</div>
+                <div class="timeline-content">
+                  <strong>${hMeta.label}</strong>
+                  <small>${h.actor} · <span class="nav-role-badge nav-role-${h.role||'warga'}" style="font-size:10px;padding:1px 5px;">${(h.role||'warga').toUpperCase()}</span> · ${Store.formatDate(h.timestamp)}</small>
+                </div>
+              </div>`;
+          }).join('')
+        : '<p style="color:var(--color-text-muted);font-size:var(--text-sm);">Belum ada riwayat perubahan status.</p>';
+
+      main.innerHTML = `
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="index.html">Dashboard</a>
+          <span>›</span>
+          <span>Detail Laporan #${item.id}</span>
+        </nav>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-5);">
+          <div>
+            <h1 style="font-size:var(--text-xl);font-weight:800;line-height:1.1;margin-bottom:var(--space-2);">${item.roadName}</h1>
+            <span class="badge ${item.status}">${meta.icon} ${meta.label}</span>
+          </div>
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;">
+            <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Buka di Google Maps ↗</a>
+            <a href="admin.html" class="btn btn-primary">Kelola di Admin →</a>
+          </div>
+        </div>
+
+        <div class="detail-layout">
+          <div class="detail-main">
+            ${photoHeroHTML}
+
+            <div class="card">
+              <div class="card-header"><div><h2>Deskripsi Kerusakan</h2></div></div>
+              <div class="card-body">
+                <p style="line-height:1.7;">${item.description}</p>
+                ${hasPhotos ? `<p style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--color-text-muted);">${item.photo_urls.length} foto terlampir: ${item.photo_urls.join(', ')}</p>` : ''}
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div><h2>Riwayat Perubahan Status</h2><p>Rekam jejak pembaruan dari pelaporan hingga penyelesaian.</p></div></div>
+              <div class="card-body">
+                <div class="timeline">${historyHTML}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-side">
+            <div class="card">
+              <div class="card-header"><div><h2>Informasi Laporan</h2></div></div>
+              <div class="card-body" style="padding-top:var(--space-2);">
+                <table class="info-table">
+                  <tr><td>ID Laporan</td><td>#${item.id}</td></tr>
+                  <tr><td>Status saat ini</td><td><span class="badge ${item.status}">${meta.label}</span></td></tr>
+                  <tr><td>Pelapor</td><td>${item.reporter || 'Anonim'}</td></tr>
+                  <tr><td>Pembaruan terakhir</td><td>${Store.formatDate(item.updatedAt)}</td></tr>
+                  <tr><td>Koordinat</td><td style="font-variant-numeric:tabular-nums;">${parseFloat(item.lat).toFixed(6)}, ${parseFloat(item.lng).toFixed(6)}</td></tr>
+                  <tr><td>Jumlah foto</td><td>${hasPhotos ? item.photo_urls.length + ' foto' : 'Belum ada'}</td></tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div><h2>Lokasi di Peta</h2></div></div>
+              <div class="card-body" style="padding:var(--space-3);">
+                <div id="detail-map" role="application" aria-label="Peta lokasi ${item.roadName}"></div>
+                <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="width:100%;margin-top:var(--space-3);justify-content:center;">
+                  Buka di Google Maps ↗
+                </a>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div><h2>Aksi Cepat</h2></div></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3);">
+                <a href="laporan.html" class="btn btn-primary" style="width:100%;justify-content:center;">+ Laporkan titik lain</a>
+                <a href="peta.html" class="btn btn-secondary" style="width:100%;justify-content:center;">Lihat semua di peta</a>
+                <button class="btn btn-ghost" id="share-btn" style="width:100%;justify-content:center;">Salin link laporan ini</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Init detail map
+      const dMap = L.map('detail-map').setView([item.lat, item.lng], 16);
+      setTimeout(() => dMap.invalidateSize(), 150);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(dMap);
+      const color = meta.color;
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:22px;height:22px;border-radius:999px;background:${color};border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.2)"></div>`,
+        iconSize: [22, 22], iconAnchor: [11, 11]
+      });
+      L.marker([item.lat, item.lng], { icon }).addTo(dMap).bindPopup(item.roadName).openPopup();
+
+      // Photo strip interaction
+      document.querySelectorAll('.photo-strip-thumb').forEach(thumb => {
+        thumb.addEventListener('click', () => {
+          document.querySelectorAll('.photo-strip-thumb').forEach(t => t.classList.remove('active'));
+          thumb.classList.add('active');
+          document.getElementById('main-photo').src = thumb.dataset.src;
+        });
+      });
+
+      // Share btn
+      document.getElementById('share-btn')?.addEventListener('click', () => {
+        const url = location.href;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(() => Toast.success('Link laporan berhasil disalin!'));
+        } else {
+          Toast.info('Link: ' + url);
+        }
+      });
+    }
+
+    // Load data
+(async () => {
+  if (!id) {
+    renderNotFound();
+  } else {
+    let item = Store.getById(id);
+    if (Api.isOnline) {
+      try {
+        item = await Api.getReportDetail(id);
+      } catch(e) {
+        console.warn('Detail fallback ke Store:', e.message);
+      }
+    }
+    if (!item) renderNotFound();
+    else renderDetail(item);
+  }
+})();
+  </script>
+</body>
+</html>
