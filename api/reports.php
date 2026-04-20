@@ -69,6 +69,35 @@ if ($method === 'GET') {
 // ── POST: Kirim laporan baru ───────────────────────────────
 if ($method === 'POST') {
     try {
+        // ── Rate Limiting (max 5 laporan per IP per 10 menit) ──
+        $ip      = preg_replace('/[^0-9a-fA-F:.]/', '', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $rateDir = sys_get_temp_dir() . '/pantau_jalan_laporan_rl/';
+        if (!is_dir($rateDir)) mkdir($rateDir, 0700, true);
+        $rateFile = $rateDir . md5($ip) . '.json';
+        $now      = time();
+        $window   = 600; // 10 menit
+        $maxReq   = 5;   // max 5 laporan per window
+
+        $rl = file_exists($rateFile)
+            ? json_decode(file_get_contents($rateFile), true)
+            : ['hits' => [], 'blocked_until' => 0];
+
+        if ($now < ($rl['blocked_until'] ?? 0)) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Terlalu banyak laporan dikirim. Coba lagi dalam 10 menit.']);
+            exit;
+        }
+        $rl['hits'] = array_filter($rl['hits'] ?? [], fn($t) => ($now - $t) < $window);
+        if (count($rl['hits']) >= $maxReq) {
+            $rl['blocked_until'] = $now + $window;
+            file_put_contents($rateFile, json_encode($rl));
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Terlalu banyak laporan dikirim. Coba lagi dalam 10 menit.']);
+            exit;
+        }
+        $rl['hits'][] = $now;
+        file_put_contents($rateFile, json_encode($rl));
+
         // Terima JSON body
         $body = json_decode(file_get_contents('php://input'), true);
 

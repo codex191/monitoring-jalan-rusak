@@ -402,7 +402,13 @@ await Api.submitReport({ roadName, description, reporter, lat, lng, photoUrls: p
           setTimeout(() => { window.location.href = 'index.html'; }, 2000);
         } catch(err) {
           LoadingBtn.stop('submit-btn');
-          Toast.error(err.message || 'Gagal mengirim laporan. Coba lagi.');
+          // Pesan khusus untuk rate limit
+          const msg = err.message || '';
+          if (msg.includes('Terlalu banyak') || err.status === 429) {
+            Toast.error('⏳ ' + msg, 8000);
+          } else {
+            Toast.error(msg || 'Gagal mengirim laporan. Coba lagi.');
+          }
           console.error('Submit error:', err);
         }
       })();
