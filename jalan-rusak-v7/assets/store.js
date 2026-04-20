@@ -37,12 +37,11 @@ function formatDisplay(isoStr) {
 // ── Status Meta ───────────────────────────────────────────────
 // value harus cocok dengan ENUM di MySQL
 const STATUS = {
-  pending:     { label: 'Menunggu Verifikasi', color: '#7a7974', icon: '⏳' },
-  ditolak:     { label: 'Ditolak',              color: '#a12c7b', icon: '❌' },
-  damaged:     { label: 'Rusak',               color: '#d13d4f', icon: '🔴' },
-  in_progress: { label: 'Sedang Diperbaiki',   color: '#d18a1f', icon: '🟡' },
-  fixed:       { label: 'Sudah Diperbaiki',    color: '#4b9b53', icon: '✅' },
-  reported:    { label: 'Dilaporkan',          color: '#2a78c8', icon: '📍' },
+  pending:     { label: 'Menunggu Verifikasi', color: '#7a7974' },
+  damaged:     { label: 'Rusak',               color: '#d13d4f' },
+  in_progress: { label: 'Sedang Diperbaiki',   color: '#d18a1f' },
+  fixed:       { label: 'Sudah Diperbaiki',    color: '#4b9b53' },
+  reported:    { label: 'Dilaporkan',          color: '#2a78c8' },
 };
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -52,12 +51,6 @@ const USERS = [
 ];
 
 window.Auth = {
-  _setUser(u) {
-    // Sync user dari API login ke Auth lokal — simpan ke this._user bukan _currentUser
-    if (u && u.username) {
-      this._user = { username: u.username, name: u.name || u.username, role: u.role };
-    }
-  },
   _user: null,
   login(username, password) {
     const u = USERS.find(x => x.username === username && x.password === password);
@@ -312,26 +305,6 @@ CREATE TABLE users (
   role        ENUM('admin','petugas','warga') NOT NULL DEFAULT 'warga',
   created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );`;
-  },
-
-  // Override data dari API (digunakan halaman dashboard, peta, admin)
-  _overrideData(rows) {
-    if (!Array.isArray(rows)) return;
-    _reports = rows.map(r => ({
-      ...r,
-      id:          r.id          || r.id,
-      roadName:    r.roadName    || r.road_name   || '',
-      description: r.description || '',
-      reporter:    r.reporter    || 'Anonim',
-      lat:         parseFloat(r.lat) || 0,
-      lng:         parseFloat(r.lng) || 0,
-      status:      r.status      || 'pending',
-      photo_urls:  Array.isArray(r.photo_urls) ? r.photo_urls : [],
-      history:     Array.isArray(r.history)    ? r.history    : [],
-      createdAt:   r.createdAt   || r.created_at || new Date().toISOString(),
-      updatedAt:   r.updatedAt   || r.updated_at || new Date().toISOString(),
-    }));
-    this._notify();
   },
 
   _notify() { _subscribers.forEach(fn => fn()); },

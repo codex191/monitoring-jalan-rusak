@@ -52,10 +52,10 @@
     },
 
     // ── Kirim laporan baru (warga) ──────────────────────────
-    async submitReport({ roadName, description, reporter, lat, lng }) {
+    async submitReport({ roadName, description, reporter, lat, lng, photoUrls = [] }) {
       const data = await req(`${BASE}/reports.php`, {
         method: 'POST',
-        body: JSON.stringify({ roadName, description, reporter, lat, lng }),
+        body: JSON.stringify({ roadName, description, reporter, lat, lng, photo_urls: photoUrls }),
       });
       return data; // { success, id, message }
     },
@@ -71,17 +71,41 @@
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Upload foto gagal.');
-      return data.url; // URL foto di server
+      return data; // { success, url, filename }
     },
 
     // ── Admin: ambil semua laporan (+ pending) ──────────────
     async getAdminReports({ status = 'all', from = '', to = '', search = '' } = {}) {
-      const params = new URLSearchParams({ action: 'get_all', status });
+      const params = new URLSearchParams({ action: 'get_all', status: 'all' });
       if (from)   params.set('from',   from);
       if (to)     params.set('to',     to);
       if (search) params.set('search', search);
       const data = await req(`${BASE}/admin.php?${params}`);
       return data.data;
+    },
+
+    // ── Admin: update status ───────────────────────────────
+    async updateStatus(id, status, note = '') {
+      return await req(`${BASE}/admin.php`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update_status', id, status, note }),
+      });
+    },
+
+    // ── Admin/Petugas: tolak laporan ────────────────────────
+    async rejectReport(id, reason) {
+      return await req(`${BASE}/admin.php`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'reject', id, reason }),
+      });
+    },
+
+    // ── Admin: hapus permanen ───────────────────────────────
+    async deleteReport(id) {
+      return await req(`${BASE}/admin.php`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', id }),
+      });
     },
 
     // ── Admin: login ────────────────────────────────────────
@@ -114,7 +138,7 @@
     // ── Admin: update status laporan ────────────────────────
     async updateStatus(id, status, note = '') {
       await req(`${BASE}/admin.php`, {
-        method: 'PUT',
+        method: 'POST',
         body: JSON.stringify({ action: 'update_status', id, status, note }),
       });
     },
@@ -122,7 +146,7 @@
     // ── Admin: hapus laporan ────────────────────────────────
     async deleteReport(id) {
       await req(`${BASE}/admin.php`, {
-        method: 'DELETE',
+        method: 'POST',
         body: JSON.stringify({ action: 'delete', id }),
       });
     },

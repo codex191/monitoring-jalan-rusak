@@ -16,10 +16,11 @@ CREATE TABLE IF NOT EXISTS reports (
     description TEXT            NOT NULL,
     lat         DECIMAL(10,7)   NOT NULL,
     lng         DECIMAL(10,7)   NOT NULL,
-    status      ENUM('pending','damaged','in_progress','fixed','reported')
+    status      ENUM('pending','damaged','in_progress','fixed','reported','ditolak')
                                 NOT NULL DEFAULT 'pending',
     reporter    VARCHAR(60)     NOT NULL DEFAULT 'Anonim',
-    verified_by VARCHAR(60)     NULL,
+    verified_by      VARCHAR(60)     NULL,
+    rejection_reason TEXT            NULL COMMENT 'Alasan penolakan laporan',
     photo_urls  JSON            NULL COMMENT 'Array of photo URL strings',
     created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE TABLE IF NOT EXISTS report_history (
     id          INT             NOT NULL AUTO_INCREMENT,
     report_id   CHAR(36)        NOT NULL,
-    status      ENUM('pending','damaged','in_progress','fixed','reported')
+    status      ENUM('pending','damaged','in_progress','fixed','reported','ditolak')
                                 NOT NULL,
     actor       VARCHAR(60)     NOT NULL,
     role        ENUM('warga','petugas','admin')
@@ -129,3 +130,13 @@ INSERT IGNORE INTO report_history (report_id, status, actor, role, note, timesta
 -- ══════════════════════════════════════════
 UPDATE users SET password = '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KR6hl6' WHERE username = 'admin';
 UPDATE users SET password = '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KR6hl6' WHERE username = 'petugas';
+
+-- ══════════════════════════════════════════
+-- UPDATE: Tambah fitur tolak laporan (jalankan jika database sudah ada)
+-- ══════════════════════════════════════════
+ALTER TABLE reports
+    MODIFY COLUMN status ENUM('pending','damaged','in_progress','fixed','reported','ditolak') NOT NULL DEFAULT 'pending',
+    ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL COMMENT 'Alasan penolakan laporan' AFTER verified_by;
+
+ALTER TABLE report_history
+    MODIFY COLUMN status ENUM('pending','damaged','in_progress','fixed','reported','ditolak') NOT NULL;

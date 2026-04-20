@@ -69,8 +69,9 @@ if (!move_uploaded_file($file['tmp_name'], $destination)) {
 }
 
 // Kembalikan URL foto
-$baseUrl  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
-$photoUrl = $baseUrl . '/pantau-jalan/uploads/photos/' . $newFilename;
+$baseUrl    = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+$scriptDir  = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'])));
+$photoUrl   = $baseUrl . $scriptDir . '/uploads/photos/' . $newFilename;
 
 echo json_encode([
     'success'  => true,

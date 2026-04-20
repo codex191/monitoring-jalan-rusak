@@ -30,28 +30,6 @@
     .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-5); margin-bottom:var(--space-5); }
     @media(max-width:768px){ .two-col,.chart-row{grid-template-columns:1fr;} }
   </style>
-
-  <script>
-    (function(){
-      var t = document.querySelector('[data-theme-toggle]');
-      var r = document.documentElement;
-      var d = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
-      r.setAttribute('data-theme', d);
-      if (t) {
-        t.innerHTML = d === 'dark'
-          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-        t.addEventListener('click', function(){
-          d = d === 'dark' ? 'light' : 'dark';
-          r.setAttribute('data-theme', d);
-          localStorage.setItem('theme', d);
-          t.innerHTML = d === 'dark'
-            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-        });
-      }
-    })();
-  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -184,7 +162,6 @@
   </div>
 
   <script src="assets/store.js"></script>
-  <script src="assets/api.js"></script>
   <script src="assets/nav.js"></script>
   <script src="assets/utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -295,22 +272,7 @@
       setTimeout(renderDashboard, 50);
     });
 
-async function loadDashboard() {
-  try {
-    if (Api.isOnline) {
-      // Ambil semua data termasuk pending untuk stats dashboard
-      const res  = await fetch('api/reports.php?stats=1');
-      const json = await res.json();
-      window._dashData = json.data || [];
-      Store._overrideData(window._dashData);
-    }
-  } catch(e) {
-    console.warn('Dashboard fallback ke Store:', e.message);
-  }
-  renderDashboard();
-}
-    loadDashboard();
-    setInterval(loadDashboard, 30000);
+    Store.subscribe(renderDashboard);
 
     // Simulasi skeleton 600ms lalu render data
     setTimeout(renderDashboard, 600);
