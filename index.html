@@ -77,7 +77,7 @@
     <main class="page-content">
       <!-- Hero -->
       <div style="margin-bottom:var(--space-6);">
-        <h1 style="font-size:var(--text-2xl);font-weight:800;line-height:1.1;margin-bottom:var(--space-3);">Pantau Jalan Kalimantan</h1>
+        <h1 style="font-size:var(--text-2xl);font-weight:800;line-height:1.1;margin-bottom:var(--space-3);">Pantau Jalan Banjarmasin</h1>
         <p style="color:var(--color-text-muted);max-width:65ch;font-size:var(--text-base);">Platform monitoring jalan rusak berbasis komunitas. Warga melaporkan, petugas memverifikasi, semua bisa memantau perkembangan perbaikan.</p>
         <div style="display:flex;gap:var(--space-3);margin-top:var(--space-5);flex-wrap:wrap;">
           <a href="laporan.html" class="btn btn-primary">+ Laporkan Jalan Rusak</a>
@@ -298,11 +298,12 @@
 async function loadDashboard() {
   try {
     if (Api.isOnline) {
-      // Ambil semua data termasuk pending untuk stats dashboard
-      const res  = await fetch('api/reports.php?stats=1');
+      // Ambil semua data termasuk pending & ditolak untuk stats dashboard
+      const res  = await fetch('api/reports.php?action=get_all&stats=1');
       const json = await res.json();
-      window._dashData = json.data || [];
-      Store._overrideData(window._dashData);
+      if (json.success && Array.isArray(json.data)) {
+        Store._overrideData(json.data);
+      }
     }
   } catch(e) {
     console.warn('Dashboard fallback ke Store:', e.message);
@@ -311,9 +312,6 @@ async function loadDashboard() {
 }
     loadDashboard();
     setInterval(loadDashboard, 30000);
-
-    // Simulasi skeleton 600ms lalu render data
-    setTimeout(renderDashboard, 600);
   </script>
 </body>
 </html>
