@@ -214,12 +214,30 @@
           iconSize:[22,22], iconAnchor:[11,11]
         });
         const gmaps = `https://www.google.com/maps?q=${item.lat},${item.lng}`;
-        const popup = L.popup({ maxWidth:240 }).setContent(`
+        const photos = Array.isArray(item.photo_urls) ? item.photo_urls : [];
+        const photoHTML = photos.length > 0 ? `
+          <div style="display:flex;gap:4px;margin:8px 0;overflow-x:auto;scrollbar-width:none;">
+            ${photos.slice(0,3).map((url, i) => `
+              <img
+                src="${url}"
+                alt="Foto ${i+1}"
+                loading="lazy"
+                onclick="window.open('${url}','_blank')"
+                onerror="this.parentElement.style.display='none'"
+                style="width:${photos.length===1?'100%':'80px'};height:72px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer;transition:opacity .15s;"
+                onmouseover="this.style.opacity='.8'"
+                onmouseout="this.style.opacity='1'"
+              />`).join('')}
+          </div>
+          ${photos.length > 3 ? `<div style="font-size:10px;color:#7a7974;margin-bottom:6px;">+${photos.length-3} foto lainnya di detail</div>` : ''}
+        ` : '';
+        const popup = L.popup({ maxWidth: photos.length > 0 ? 260 : 240 }).setContent(`
           <div style="font-family:Inter,sans-serif;padding:4px;">
             <strong style="font-size:14px;display:block;margin-bottom:6px;">${item.roadName}</strong>
             <span class="badge ${item.status}" style="font-size:11px;">${meta.icon ?? ''} ${meta.label ?? item.status}</span>
             ${isPending ? '<div style="margin-top:6px;font-size:11px;color:#964219;font-weight:700;">⚠️ Menunggu verifikasi petugas</div>' : ''}
-            <p style="margin:8px 0 6px;font-size:12px;color:#7a7974;">${item.description}</p>
+            ${photoHTML}
+            <p style="margin:4px 0 6px;font-size:12px;color:#7a7974;">${item.description}</p>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
               <a href="detail.html?id=${item.id}" style="flex:1;padding:5px 8px;background:#01696f;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-align:center;">Lihat detail →</a>
               <a href="${gmaps}" target="_blank" rel="noopener noreferrer" style="flex:1;padding:5px 8px;background:#f3f0ec;color:#28251d;border-radius:6px;font-size:11px;font-weight:700;text-align:center;">Google Maps ↗</a>
