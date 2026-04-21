@@ -254,6 +254,7 @@
             <h1 style="font-size:var(--text-xl);font-weight:800;line-height:1.1;margin-bottom:var(--space-2);">${item.roadName}</h1>
             <span class="badge ${item.status}">${meta.icon} ${meta.label}</span>
           </div>
+          ${rejectionHTML}
           <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;">
             <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Buka di Google Maps ↗</a>
             <a href="admin.html" class="btn btn-primary">Kelola di Admin →</a>

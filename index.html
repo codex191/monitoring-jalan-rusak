@@ -299,7 +299,8 @@ async function loadDashboard() {
   try {
     if (Api.isOnline) {
       // Ambil semua data termasuk pending & ditolak untuk stats dashboard
-      const res  = await fetch('api/reports.php?action=get_all&stats=1');
+      // per_page=9999 agar semua data masuk hitungan KPI & chart
+      const res  = await fetch('api/reports.php?action=get_all&stats=1&per_page=9999');
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         Store._overrideData(json.data);

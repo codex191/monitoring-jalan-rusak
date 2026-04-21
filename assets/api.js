@@ -171,21 +171,6 @@
       } catch(e) { /* abaikan */ }
     },
 
-    // ── Admin: update status laporan ────────────────────────
-    async updateStatus(id, status, note = '') {
-      await req(`${BASE}/admin.php`, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'update_status', id, status, note }),
-      });
-    },
-
-    // ── Admin: hapus laporan ────────────────────────────────
-    async deleteReport(id) {
-      await req(`${BASE}/admin.php`, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'delete', id }),
-      });
-    },
   };
 
   global.Api = Api;

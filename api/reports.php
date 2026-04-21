@@ -34,6 +34,13 @@ if ($method === 'GET') {
             $sql     .= " AND status = :status";
             $params[':status'] = $status;
         }
+        // Filter pencarian nama jalan / deskripsi
+        $search = trim($_GET['search'] ?? '');
+        if ($search !== '') {
+            $sql .= " AND (road_name LIKE :search OR description LIKE :search2)";
+            $params[':search']  = '%' . $search . '%';
+            $params[':search2'] = '%' . $search . '%';
+        }
         if ($from) {
             $sql     .= " AND created_at >= :from";
             $params[':from'] = $from . ' 00:00:00';
