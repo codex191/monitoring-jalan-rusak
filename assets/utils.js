@@ -283,3 +283,59 @@ window.OfflineIndicator = {
     update();
   }
 };
+
+// ── Geofencing Kalimantan Tengah ──────────────────────────────
+window.Geofence = {
+  // Bounding box Kalimantan Tengah
+  BOUNDS: {
+    minLat: -4.80,
+    maxLat:  0.10,
+    minLng: 110.40,
+    maxLng: 116.70,
+  },
+
+  /**
+   * Cek apakah koordinat berada di dalam wilayah Kalimantan Tengah
+   * @param {number} lat
+   * @param {number} lng
+   * @returns {boolean}
+   */
+  isInsideKalteng(lat, lng) {
+    const { minLat, maxLat, minLng, maxLng } = this.BOUNDS;
+    return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+  },
+
+  /**
+   * Validasi koordinat dan kembalikan pesan error jika di luar Kalteng
+   * @param {number} lat
+   * @param {number} lng
+   * @returns {{ ok: boolean, message: string }}
+   */
+  validate(lat, lng) {
+    if (isNaN(lat) || isNaN(lng)) {
+      return { ok: false, message: 'Koordinat tidak valid.' };
+    }
+    if (!this.isInsideKalteng(lat, lng)) {
+      return {
+        ok: false,
+        message: 'Lokasi kamu berada di luar wilayah Kalimantan Tengah. ' +
+                 'Sistem ini hanya menerima laporan dari wilayah Kalimantan Tengah.',
+      };
+    }
+    return { ok: true, message: '' };
+  },
+
+  // Batas peta Leaflet (untuk maxBounds)
+  leafletBounds() {
+    const { minLat, maxLat, minLng, maxLng } = this.BOUNDS;
+    // Sedikit padding 0.5 derajat supaya tidak terlalu ketat di tepi
+    return [
+      [minLat - 0.5, minLng - 0.5],
+      [maxLat + 0.5, maxLng + 0.5],
+    ];
+  },
+
+  // Center Kalimantan Tengah (Palangkaraya)
+  CENTER: [-1.5, 113.9],
+  DEFAULT_ZOOM: 7,
+};

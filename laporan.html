@@ -235,14 +235,27 @@
     if (typeof OfflineIndicator !== 'undefined') OfflineIndicator.init();
 
     // ── Mini Map ──────────────────────────────
-    const miniMap = L.map('mini-map').setView([-2.216, 113.916], 13);
+    const miniMap = L.map('mini-map', {
+      minZoom: 7,
+      maxBounds: [[-5.3, 109.9], [0.6, 117.2]],
+      maxBoundsViscosity: 0.9,
+    }).setView([-1.5, 113.9], 9);
     setTimeout(() => miniMap.invalidateSize(), 100);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap contributors', maxZoom:19
     }).addTo(miniMap);
 
     let marker = null;
-    function setCoords(lat, lng) {
+    function setCoords(lat, lng, skipGeocheck = false) {
+      // Validasi geofencing Kalimantan Tengah
+      if (!skipGeocheck && window.Geofence) {
+        const geoCheck = Geofence.validate(lat, lng);
+        if (!geoCheck.ok) {
+          Toast.error(geoCheck.message, 8000);
+          FormError.show('lat', 'Lokasi di luar wilayah Kalimantan Tengah.');
+          return false;
+        }
+      }
       document.getElementById('lat').value = lat.toFixed(7);
       document.getElementById('lng').value = lng.toFixed(7);
       FormError.clear('lat'); FormError.clear('lng');
@@ -257,6 +270,7 @@
         reporter: document.getElementById('reporter')?.value||'',
         lat: lat.toFixed(7), lng: lng.toFixed(7)
       });
+      return true;
     }
 
     miniMap.on('click', e => setCoords(e.latlng.lat, e.latlng.lng));
@@ -270,10 +284,15 @@
       }
       navigator.geolocation.getCurrentPosition(
         pos => {
-          setCoords(pos.coords.latitude, pos.coords.longitude);
-          Toast.success('Lokasi GPS berhasil diambil!');
-          btn.disabled=false; btn.textContent='📍 Lokasi GPS Diambil ✓';
-          btn.style.background='var(--color-success)';
+          const ok = setCoords(pos.coords.latitude, pos.coords.longitude);
+          if (ok) {
+            Toast.success('Lokasi GPS berhasil diambil!');
+            btn.disabled=false; btn.textContent='📍 Lokasi GPS Diambil ✓';
+            btn.style.background='var(--color-success)';
+          } else {
+            btn.disabled=false; btn.textContent='📍 Ambil Lokasi GPS';
+            btn.style.background='';
+          }
         },
         err => {
           const msg = err.code===1?'Izin lokasi ditolak. Aktifkan GPS di browser.':
@@ -361,6 +380,16 @@
 
       const { ok, errors } = Validate.reportForm({ roadName, description, reporter, lat:latRaw, lng:lngRaw });
       if (!ok) { FormError.showAll(errors); return; }
+
+      // Validasi geofencing Kalimantan Tengah
+      if (window.Geofence) {
+        const geoCheck = Geofence.validate(parseFloat(latRaw), parseFloat(lngRaw));
+        if (!geoCheck.ok) {
+          FormError.show('lat', 'Lokasi di luar wilayah Kalimantan Tengah.');
+          Toast.error(geoCheck.message, 8000);
+          return;
+        }
+      }
 
       LoadingBtn.start('submit-btn', 'Mengirim...');
 

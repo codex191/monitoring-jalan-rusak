@@ -141,7 +141,12 @@
       document.getElementById('legend-pending').style.display = '';
     }
 
-    const map = L.map('map', { preferCanvas: true }).setView([-2.216, 113.916], 13);
+    const map = L.map('map', {
+      preferCanvas: true,
+      minZoom: 7,
+      maxBounds: [[-5.3, 109.9], [0.6, 117.2]],
+      maxBoundsViscosity: 0.85,
+    }).setView([-1.5, 113.9], 8);
     setTimeout(() => map.invalidateSize(), 100);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
     const markersLayer = L.layerGroup().addTo(map);

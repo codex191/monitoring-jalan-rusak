@@ -133,6 +133,28 @@ $reporter    = trim($body['reporter']    ?? 'Anonim');
 $lat         = floatval($body['lat']     ?? 0);
 $lng         = floatval($body['lng']     ?? 0);
 $photoUrls     = $body['photo_urls']     ?? [];
+
+// ── Validasi Geofencing Kalimantan Tengah ─────────────────────
+$KALTENG_BOUNDS = [
+    'minLat' => -4.80, 'maxLat' => 0.10,
+    'minLng' => 110.40, 'maxLng' => 116.70,
+];
+$latCheck = isset($body['lat']) ? floatval($body['lat']) : null;
+$lngCheck = isset($body['lng']) ? floatval($body['lng']) : null;
+if ($latCheck !== null && $lngCheck !== null) {
+    if (
+        $latCheck < $KALTENG_BOUNDS['minLat'] || $latCheck > $KALTENG_BOUNDS['maxLat'] ||
+        $lngCheck < $KALTENG_BOUNDS['minLng'] || $lngCheck > $KALTENG_BOUNDS['maxLng']
+    ) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Lokasi berada di luar wilayah Kalimantan Tengah. Sistem hanya menerima laporan dari wilayah Kalimantan Tengah.',
+            'errors'  => ['lat' => 'Koordinat di luar wilayah Kalimantan Tengah.'],
+        ]);
+        exit;
+    }
+}
 if (!is_array($photoUrls)) $photoUrls = [];
 $photoUrlsJson = json_encode(array_values($photoUrls));
 
