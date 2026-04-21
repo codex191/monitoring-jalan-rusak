@@ -56,7 +56,25 @@
     // ── Detail 1 laporan ────────────────────────────────────
     async getReportDetail(id) {
       const data = await req(`${BASE}/report_detail.php?id=${encodeURIComponent(id)}`);
-      return data.data;
+      const r = data.data;
+      if (!r) return null;
+      // Mapping snake_case DB → camelCase Store
+      return {
+        ...r,
+        id:              r.id,
+        roadName:        r.road_name    || r.roadName    || '',
+        description:     r.description  || '',
+        reporter:        r.reporter     || 'Anonim',
+        lat:             parseFloat(r.lat) || 0,
+        lng:             parseFloat(r.lng) || 0,
+        status:          r.status       || 'pending',
+        verifiedBy:      r.verified_by  || r.verifiedBy  || null,
+        rejectionReason: r.rejection_reason || r.rejectionReason || null,
+        photo_urls:      Array.isArray(r.photo_urls) ? r.photo_urls : [],
+        history:         Array.isArray(r.history)    ? r.history    : [],
+        createdAt:       r.created_at   || r.createdAt  || '',
+        updatedAt:       r.updated_at   || r.updatedAt  || '',
+      };
     },
 
     // ── Kirim laporan baru (warga) ──────────────────────────

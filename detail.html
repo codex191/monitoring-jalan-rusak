@@ -196,6 +196,11 @@
 
     function renderDetail(item) {
       const meta = Store.statusMeta[item.status] ?? { label: item.status, color: '#7a7974', icon: '⚪' };
+      const rejectionHTML = (item.status === 'ditolak' && (item.rejectionReason || item.rejection_reason))
+        ? `<div style="margin-top:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--color-error-highlight,#f8e4ef);border-radius:var(--radius-md);font-size:var(--text-sm);">
+            <strong style="color:var(--color-error);">❌ Alasan Penolakan:</strong>
+            <p style="margin-top:4px;color:var(--color-text);">${item.rejectionReason || item.rejection_reason}</p>
+           </div>` : '';
       const gmapsUrl = `https://www.google.com/maps?q=${item.lat},${item.lng}`;
 
       // Foto
@@ -348,18 +353,36 @@
 (async () => {
   if (!id) {
     renderNotFound();
-  } else {
-    let item = Store.getById(id);
-    if (Api.isOnline) {
-      try {
-        item = await Api.getReportDetail(id);
-      } catch(e) {
-        console.warn('Detail fallback ke Store:', e.message);
-      }
-    }
-    if (!item) renderNotFound();
-    else renderDetail(item);
+    return;
   }
+
+  // Tampilkan skeleton sementara data dimuat
+  const main = document.getElementById('main-content') || document.querySelector('main');
+  if (main) {
+    main.innerHTML = `
+      <div style="max-width:760px;margin:var(--space-8) auto;padding:0 var(--space-4);">
+        <div style="background:var(--color-surface);border-radius:var(--radius-lg);padding:var(--space-6);margin-bottom:var(--space-4);">
+          <div class="skeleton skeleton-heading" style="height:1.4em;width:55%;margin-bottom:var(--space-3);border-radius:var(--radius-sm);"></div>
+          <div class="skeleton skeleton-text" style="height:1em;width:30%;margin-bottom:var(--space-6);border-radius:var(--radius-sm);"></div>
+          <div class="skeleton skeleton-image" style="height:220px;width:100%;border-radius:var(--radius-md);margin-bottom:var(--space-4);"></div>
+          <div class="skeleton skeleton-text" style="height:1em;width:100%;margin-bottom:var(--space-2);border-radius:var(--radius-sm);"></div>
+          <div class="skeleton skeleton-text" style="height:1em;width:80%;border-radius:var(--radius-sm);"></div>
+        </div>
+      </div>`;
+  }
+
+  let item = Store.getById(id);
+  if (Api.isOnline) {
+    try {
+      const fresh = await Api.getReportDetail(id);
+      if (fresh) item = fresh;
+    } catch(e) {
+      console.warn('Detail fallback ke Store:', e.message);
+    }
+  }
+
+  if (!item) renderNotFound();
+  else renderDetail(item);
 })();
   </script>
 </body>
