@@ -121,6 +121,19 @@
     @media (max-width: 900px) {
       .detail-layout { grid-template-columns: 1fr; }
     }
+    .confirm-count { display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4);background:var(--color-primary-highlight);border-radius:var(--radius-lg);margin-bottom:var(--space-4); }
+    .confirm-count-num { font-size:var(--text-2xl);font-weight:900;color:var(--color-primary);line-height:1; }
+    .confirm-count-label { font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.4; }
+    .confirm-list { display:flex;flex-direction:column;gap:var(--space-3);max-height:240px;overflow-y:auto; }
+    .confirm-item { display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3);background:var(--color-surface-2);border-radius:var(--radius-md);border:1px solid var(--color-border); }
+    .confirm-avatar { width:32px;height:32px;border-radius:999px;background:var(--color-primary-highlight);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0; }
+    .confirm-name { font-weight:600;font-size:var(--text-sm); }
+    .confirm-note { font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px; }
+    .confirm-date { font-size:var(--text-xs);color:var(--color-text-faint); }
+    .confirm-form { display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-4); }
+    .confirm-form input,.confirm-form textarea { width:100%;padding:var(--space-3) var(--space-4);border:1.5px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);color:var(--color-text);font-size:var(--text-sm);font-family:inherit;resize:vertical;transition:border-color var(--transition-interactive); }
+    .confirm-form input:focus,.confirm-form textarea:focus { outline:none;border-color:var(--color-primary); }
+    .confirm-divider { border:none;border-top:1px solid var(--color-divider);margin:var(--space-4) 0; }
   </style>
 
   <script>
@@ -312,6 +325,38 @@
               </div>
             </div>
 
+            <!-- Card Konfirmasi Warga -->
+            <div class="card" id="card-konfirmasi">
+              <div class="card-header">
+                <div>
+                  <h2>👥 Konfirmasi Warga</h2>
+                  <p>Warga lain yang menyaksikan kerusakan ini</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="confirm-count" id="confirm-count-box">
+                  <div class="confirm-count-num" id="confirm-count-num">–</div>
+                  <div class="confirm-count-label">warga mengkonfirmasi<br>kerusakan ini</div>
+                </div>
+
+                <div class="confirm-list" id="confirm-list">
+                  <!-- diisi JS -->
+                </div>
+
+                <hr class="confirm-divider"/>
+
+                <p style="font-size:var(--text-sm);font-weight:700;margin-bottom:var(--space-3);">✋ Saya juga menyaksikan ini</p>
+                <div class="confirm-form" id="confirm-form">
+                  <input type="text" id="conf-name" placeholder="Nama kamu (opsional)" maxlength="60" autocomplete="name"/>
+                  <textarea id="conf-note" placeholder="Keterangan tambahan (opsional) — contoh: jalan ini sudah rusak 3 bulan" maxlength="300" rows="2"></textarea>
+                  <button class="btn btn-primary" id="conf-submit-btn" onclick="submitKonfirmasi()">
+                    ✋ Konfirmasi Kerusakan Ini
+                  </button>
+                </div>
+                <p id="conf-feedback" style="display:none;font-size:var(--text-sm);text-align:center;margin-top:var(--space-2);"></p>
+              </div>
+            </div>
+
             <div class="card">
               <div class="card-header"><div><h2>Aksi Cepat</h2></div></div>
               <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3);">
@@ -356,6 +401,83 @@
       });
     }
 
+    // ── Konfirmasi Warga ────────────────────────────────────────────────────────
+    async function loadKonfirmasi(reportId) {
+      try {
+        const base = location.origin + location.pathname.replace(/\/[^\/]*$/, '');
+        const res  = await fetch(`${base}/api/confirmations.php?report_id=${encodeURIComponent(reportId)}`, { credentials: 'include' });
+        const json = await res.json();
+        if (!json.success) return;
+
+        document.getElementById('confirm-count-num').textContent = json.total;
+
+        const list = document.getElementById('confirm-list');
+        if (!json.data || json.data.length === 0) {
+          list.innerHTML = '<p style="font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;padding:var(--space-3) 0;">Belum ada konfirmasi. Jadilah yang pertama!</p>';
+          return;
+        }
+        list.innerHTML = json.data.map(d => {
+          const initial = (d.name || 'A')[0].toUpperCase();
+          const dt = new Date(d.created_at).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+          return `
+            <div class="confirm-item">
+              <div class="confirm-avatar">${initial}</div>
+              <div style="flex:1;min-width:0;">
+                <div class="confirm-name">${d.name || 'Anonim'}</div>
+                ${d.note ? `<div class="confirm-note">${d.note}</div>` : ''}
+                <div class="confirm-date">${dt}</div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch(e) {
+        console.warn('Gagal load konfirmasi:', e.message);
+      }
+    }
+
+    async function submitKonfirmasi() {
+      const reportId = new URLSearchParams(location.search).get('id');
+      if (!reportId) return;
+
+      const name  = document.getElementById('conf-name').value.trim();
+      const note  = document.getElementById('conf-note').value.trim();
+      const btn   = document.getElementById('conf-submit-btn');
+      const fbEl  = document.getElementById('conf-feedback');
+
+      btn.disabled = true;
+      btn.textContent = 'Mengirim...';
+      fbEl.style.display = 'none';
+
+      try {
+        const base = location.origin + location.pathname.replace(/\/[^\/]*$/, '');
+        const res  = await fetch(`${base}/api/confirmations.php`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: reportId, name: name || 'Anonim', note })
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          document.getElementById('confirm-count-num').textContent = json.total;
+          document.getElementById('confirm-form').style.display = 'none';
+          fbEl.style.cssText = 'display:block;color:var(--color-success);font-size:var(--text-sm);text-align:center;margin-top:var(--space-2);';
+          fbEl.textContent = '✅ ' + json.message;
+          await loadKonfirmasi(reportId);
+        } else {
+          fbEl.style.cssText = 'display:block;color:var(--color-error);font-size:var(--text-sm);text-align:center;margin-top:var(--space-2);';
+          fbEl.textContent = '⚠️ ' + json.message;
+          btn.disabled = false;
+          btn.textContent = '✋ Konfirmasi Kerusakan Ini';
+        }
+      } catch(e) {
+        fbEl.style.cssText = 'display:block;color:var(--color-error);font-size:var(--text-sm);text-align:center;margin-top:var(--space-2);';
+        fbEl.textContent = '⚠️ Gagal terhubung ke server.';
+        btn.disabled = false;
+        btn.textContent = '✋ Konfirmasi Kerusakan Ini';
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     // Load data
 (async () => {
   if (!id) {
@@ -389,7 +511,10 @@
   }
 
   if (!item) renderNotFound();
-  else renderDetail(item);
+  else {
+    renderDetail(item);
+    if (Api.isOnline) loadKonfirmasi(id);
+  }
 })();
   </script>
 </body>
