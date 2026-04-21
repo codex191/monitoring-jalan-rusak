@@ -19,10 +19,18 @@
     ? (location.origin + location.pathname.replace(/\/[^/]*$/, '') + '/api')
     : null;
 
+  // ── CSRF Token ───────────────────────────────────────────
+  let _csrfToken = '';
+
   // ── Helper fetch ─────────────────────────────────────────
   async function req(url, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    // Sertakan CSRF token di semua POST request
+    if ((options.method || 'GET').toUpperCase() === 'POST' && _csrfToken) {
+      headers['X-CSRF-Token'] = _csrfToken;
+    }
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers,
       credentials: 'include', // penting untuk session cookie PHP
       ...options,
     });
@@ -114,6 +122,7 @@
         method: 'POST',
         body: JSON.stringify({ action: 'login', username, password }),
       });
+      if (data.csrf_token) _csrfToken = data.csrf_token;
       return data.user; // { id, username, name, role }
     },
 
@@ -129,10 +138,19 @@
     async checkSession() {
       try {
         const data = await req(`${BASE}/admin.php?action=check_session`);
+        if (data.csrf_token) _csrfToken = data.csrf_token;
         return data.user;
       } catch {
         return null;
       }
+    },
+
+    // ── Ambil CSRF token fresh (panggil saat halaman load) ───
+    async fetchCsrfToken() {
+      try {
+        const data = await req(`${BASE}/admin.php?action=get_csrf`);
+        if (data.csrf_token) _csrfToken = data.csrf_token;
+      } catch(e) { /* abaikan */ }
     },
 
     // ── Admin: update status laporan ────────────────────────

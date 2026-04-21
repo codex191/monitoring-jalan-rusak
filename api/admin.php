@@ -16,14 +16,51 @@ $action = trim($body['action'] ?? ($_GET['action'] ?? ''));
 function ok($data = [])  { echo json_encode(array_merge(['success'=>true], $data)); exit; }
 function fail($msg, $code = 422) { http_response_code($code); echo json_encode(['success'=>false,'message'=>$msg]); exit; }
 
-// ── GET: check_session ───────────────────────────────────────
-if ($method === 'GET' && $action === 'check_session') {
-    if (!empty($_SESSION['user'])) ok(['user' => $_SESSION['user']]);
-    else fail('Tidak ada sesi aktif.', 401);
+// ── CSRF Helpers ─────────────────────────────────────────────
+function generateCsrfToken() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token']    = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token_ts'] = time();
+    }
+    // Rotate token setiap 2 jam
+    if ((time() - ($_SESSION['csrf_token_ts'] ?? 0)) > 7200) {
+        $_SESSION['csrf_token']    = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token_ts'] = time();
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCsrfToken() {
+    // Aksi yang dikecualikan (login tidak perlu CSRF karena belum ada sesi)
+    global $action;
+    if ($action === 'login') return;
+
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN']
+          ?? ($_POST['csrf_token'] ?? '');
+    $stored = $_SESSION['csrf_token'] ?? '';
+
+    if (!$token || !$stored || !hash_equals($stored, $token)) {
+        fail('Permintaan tidak valid (CSRF token salah atau kadaluarsa). Silakan refresh halaman.', 403);
+    }
+}
+
+// ── GET: check_session & get_csrf ────────────────────────────
+if ($method === 'GET') {
+    if ($action === 'check_session') {
+        if (!empty($_SESSION['user'])) ok(['user' => $_SESSION['user'], 'csrf_token' => generateCsrfToken()]);
+        else fail('Tidak ada sesi aktif.', 401);
+    }
+    if ($action === 'get_csrf') {
+        ok(['csrf_token' => generateCsrfToken()]);
+    }
+    fail('Aksi GET tidak dikenal.', 400);
 }
 
 // ── Semua POST ───────────────────────────────────────────────
 if ($method !== 'POST') fail('Method tidak didukung.', 405);
+
+// Verifikasi CSRF (kecuali login)
+verifyCsrfToken();
 
 // ── LOGIN (tidak perlu sesi) ─────────────────────────────────
 if ($action === 'login') {
@@ -44,7 +81,7 @@ if ($action === 'login') {
         'role'     => $user['role'],
     ];
     $_SESSION['user'] = $userData;
-    ok(['user' => $userData]);
+    ok(['user' => $userData, 'csrf_token' => generateCsrfToken()]);
 }
 
 // ── LOGOUT ───────────────────────────────────────────────────

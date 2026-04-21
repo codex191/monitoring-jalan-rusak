@@ -429,6 +429,9 @@
       renderTable();
     }
 
+    // Ambil CSRF token saat halaman load (untuk protect aksi POST)
+    if (Api.isOnline) Api.fetchCsrfToken();
+
     if (Auth.getUser()) {
       renderRoleInfo();
       showMain();
