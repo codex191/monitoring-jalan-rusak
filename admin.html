@@ -436,9 +436,52 @@
       renderRoleInfo();
       showMain();
       loadAdminData();
+      initSSE(); // mulai notifikasi real-time
     } else {
       showLogin();
     }
+
+    // ── SSE: Notifikasi real-time laporan baru ────────────────
+    let _sseSource = null;
+    function initSSE() {
+      if (!Api.isOnline || !window.EventSource) return;
+      if (_sseSource) { _sseSource.close(); _sseSource = null; }
+
+      const BASE_URL = location.origin + location.pathname.replace(/\/[^/]*$/, '');
+      _sseSource = new EventSource(BASE_URL + '/api/sse.php', { withCredentials: true });
+
+      _sseSource.addEventListener('new_report', (e) => {
+        const payload = JSON.parse(e.data);
+        // Toast notifikasi
+        Toast.info(`🔔 ${payload.message}`, 7000);
+        // Update badge pending di tab
+        const badge = document.getElementById('pending-count');
+        if (badge) {
+          const cur = parseInt(badge.textContent) || 0;
+          badge.textContent = cur + payload.count;
+          badge.style.animation = 'none';
+          setTimeout(() => badge.style.animation = '', 10);
+        }
+        // Reload data tabel otomatis
+        loadAdminData();
+      });
+
+      _sseSource.addEventListener('stats_update', (e) => {
+        const payload = JSON.parse(e.data);
+        const badge = document.getElementById('pending-count');
+        if (badge) badge.textContent = payload.pending || 0;
+      });
+
+      _sseSource.addEventListener('error', () => {
+        // EventSource auto-reconnect, tidak perlu handle manual
+        console.warn('SSE: koneksi terputus, mencoba reconnect...');
+      });
+    }
+
+    // Tutup SSE saat halaman ditutup
+    window.addEventListener('beforeunload', () => {
+      if (_sseSource) _sseSource.close();
+    });
 
     document.getElementById('login-form').addEventListener('submit', async function(e){
       e.preventDefault();
