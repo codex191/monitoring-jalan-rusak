@@ -203,17 +203,22 @@
            </div>` : '';
       const gmapsUrl = `https://www.google.com/maps?q=${item.lat},${item.lng}`;
 
-      // Foto
+      // Foto — gunakan URL asli dari uploads/, bukan placeholder
       const hasPhotos = item.photo_urls && item.photo_urls.length > 0;
       const photoHeroHTML = hasPhotos
         ? `
           <div class="photo-hero">
-            <img id="main-photo" src="https://picsum.photos/seed/${item.id}road/800/420" alt="Foto utama ${item.roadName}" width="800" height="420" loading="lazy" />
+            <img id="main-photo" src="${item.photo_urls[0]}" alt="Foto utama ${item.roadName}" width="800" height="420" loading="lazy"
+              onerror="this.src='';this.style.display='none';this.parentElement.querySelector('.no-photo-fallback')?.style.setProperty('display','flex')" />
+            <div class="no-photo-fallback" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:220px;color:var(--color-text-muted);">
+              <div style="font-size:2rem;">📷</div><span>Foto tidak dapat dimuat</span>
+            </div>
             ${item.photo_urls.length > 1 ? `
             <div class="photo-strip">
               ${item.photo_urls.map((p, i) => `
-                <div class="photo-strip-thumb ${i === 0 ? 'active' : ''}" data-src="https://picsum.photos/seed/${item.id}road${i}/800/420" role="button" tabindex="0" aria-label="Foto ${i+1}: ${p}">
-                  <img src="https://picsum.photos/seed/${item.id}road${i}/120/120" alt="${p}" width="60" height="60" loading="lazy" />
+                <div class="photo-strip-thumb ${i === 0 ? 'active' : ''}" data-src="${p}" role="button" tabindex="0" aria-label="Foto ${i+1}">
+                  <img src="${p}" alt="Thumbnail foto ${i+1}" width="60" height="60" loading="lazy"
+                    onerror="this.parentElement.style.display='none'" />
                 </div>
               `).join('')}
             </div>` : ''}
