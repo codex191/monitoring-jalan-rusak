@@ -417,11 +417,11 @@
       }
     }
 
-    async function loadAdminData() {
+    async function loadAdminData(page = 1) {
       try {
         if (Api.isOnline) {
-          const rows = await Api.getAdminReports({ status:'all', search:'' });
-          Store._overrideData(rows);
+          const res = await Api.getAdminReports({ status:'all', search:'', page, perPage: 10 });
+          Store._overrideData(res.data || res);
         }
       } catch(e) {
         console.warn('Admin data fallback ke Store:', e.message);

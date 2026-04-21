@@ -45,12 +45,12 @@
     isOnline: isLocalhost && !!BASE,
 
     // ── Laporan publik ──────────────────────────────────────
-    async getReports({ status = 'all', from = '', to = '' } = {}) {
-      const params = new URLSearchParams({ status });
+    async getReports({ status = 'all', from = '', to = '', page = 1, perPage = 20 } = {}) {
+      const params = new URLSearchParams({ status, page, per_page: perPage });
       if (from) params.set('from', from);
       if (to)   params.set('to',   to);
       const data = await req(`${BASE}/reports.php?${params}`);
-      return data.data; // array laporan
+      return { data: data.data, total: data.total, page: data.page, totalPages: data.total_pages };
     },
 
     // ── Detail 1 laporan ────────────────────────────────────
@@ -101,13 +101,13 @@
     },
 
     // ── Admin: ambil semua laporan (+ pending) ──────────────
-    async getAdminReports({ status = 'all', from = '', to = '', search = '' } = {}) {
-      const params = new URLSearchParams({ action: 'get_all', status: 'all' });
+    async getAdminReports({ status = 'all', from = '', to = '', search = '', page = 1, perPage = 10 } = {}) {
+      const params = new URLSearchParams({ action: 'get_all', status, page, per_page: perPage });
       if (from)   params.set('from',   from);
       if (to)     params.set('to',     to);
       if (search) params.set('search', search);
       const data = await req(`${BASE}/reports.php?${params}`);
-      return data.data;
+      return { data: data.data, total: data.total, page: data.page, totalPages: data.total_pages };
     },
 
     // ── Admin: update status ───────────────────────────────

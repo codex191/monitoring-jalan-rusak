@@ -273,7 +273,9 @@
       try {
         if (Api.isOnline) {
           // Peta publik selalu pakai getReports (tidak perlu login)
-          window._petaData = await Api.getReports();
+          // per_page besar agar semua marker tampil di peta
+          const petaRes = await Api.getReports({ perPage: 200 });
+          window._petaData = petaRes.data || petaRes;
           Store._overrideData(window._petaData);
         } else {
           window._petaData = Store.getPublic();

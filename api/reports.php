@@ -43,21 +43,38 @@ if ($method === 'GET') {
             $params[':to'] = $to . ' 23:59:59';
         }
 
-        $sql .= " ORDER BY created_at DESC";
+        // Hitung total data (tanpa LIMIT)
+        $countSql  = "SELECT COUNT(*) FROM (" . $sql . ") AS sub";
+        $countStmt = $db->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
 
+        // Server-side pagination
+        $page    = max(1, intval($_GET['page']     ?? 1));
+        $perPage = min(100, max(5, intval($_GET['per_page'] ?? 20)));
+        $offset  = ($page - 1) * $perPage;
+
+        $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+        $stmt->bindValue(':limit',  $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset,  PDO::PARAM_INT);
+        $stmt->execute();
         $reports = $stmt->fetchAll();
 
         // Decode photo_urls dari JSON string ke array
         foreach ($reports as &$r) {
-            $r['photo_urls'] = json_decode($r['photo_urls'] ?? '[]', true) ?: [];
+            $r['photo_urls']       = json_decode($r['photo_urls'] ?? '[]', true) ?: [];
+            $r['rejection_reason'] = $r['rejection_reason'] ?? null;
         }
 
         echo json_encode([
-            'success' => true,
-            'data'    => $reports,
-            'total'   => count($reports),
+            'success'     => true,
+            'data'        => $reports,
+            'total'       => $total,
+            'page'        => $page,
+            'per_page'    => $perPage,
+            'total_pages' => (int) ceil($total / $perPage),
         ]);
     } catch (Exception $e) {
         http_response_code(500);
