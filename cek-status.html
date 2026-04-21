@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cek Status Laporan — Pantau Jalan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css"/>
+  <script>
+    (function(){
+      var t = document.querySelector('[data-theme-toggle]');
+      var r = document.documentElement;
+      var d = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+      r.setAttribute('data-theme', d);
+      if (t) {
+        t.innerHTML = d === 'dark'
+          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        t.addEventListener('click', function(){
+          d = d === 'dark' ? 'light' : 'dark';
+          r.setAttribute('data-theme', d);
+          localStorage.setItem('theme', d);
+          t.innerHTML = d === 'dark'
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        });
+      }
+    })();
+  </script>
+  <style>
+    .cek-wrap {
+      max-width: 600px;
+      margin: var(--space-12) auto;
+      padding: 0 var(--space-4);
+    }
+    .cek-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+    }
+    .cek-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+    .cek-icon { font-size: 3rem; margin-bottom: var(--space-3); }
+    .cek-header h1 { font-size: var(--text-xl); font-weight: 800; margin-bottom: var(--space-2); }
+    .cek-header p  { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+    .input-group { display: flex; gap: var(--space-3); }
+    .input-group input {
+      flex: 1;
+      padding: var(--space-3) var(--space-4);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-base);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 600;
+      transition: border-color var(--transition-interactive);
+    }
+    .input-group input:focus { outline: none; border-color: var(--color-primary); }
+    .input-group input::placeholder { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+    /* Hasil */
+    #result { margin-top: var(--space-6); display: none; }
+    .result-card {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .result-header {
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+    .result-body { padding: var(--space-5) var(--space-6); }
+    .result-meta { display: grid; gap: var(--space-2); margin-bottom: var(--space-5); }
+    .result-meta-row {
+      display: flex;
+      gap: var(--space-3);
+      font-size: var(--text-sm);
+    }
+    .result-meta-row .label { color: var(--color-text-muted); min-width: 120px; flex-shrink: 0; }
+    .result-meta-row .value { color: var(--color-text); font-weight: 500; }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item {
+      display: flex;
+      gap: var(--space-3);
+      padding-bottom: var(--space-4);
+      position: relative;
+    }
+    .tl-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 32px;
+      bottom: 0;
+      width: 2px;
+      background: var(--color-divider);
+    }
+    .tl-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-surface-offset);
+      border: 2px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .tl-content { flex: 1; padding-top: 4px; }
+    .tl-content strong { font-size: var(--text-sm); display: block; }
+    .tl-content small { color: var(--color-text-muted); font-size: var(--text-xs); }
+
+    .rejection-box {
+      background: var(--color-error-highlight);
+      border: 1px solid var(--color-error);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      margin-top: var(--space-4);
+      font-size: var(--text-sm);
+    }
+    .rejection-box strong { color: var(--color-error); display: block; margin-bottom: 4px; }
+
+    .error-msg {
+      background: var(--color-error-highlight);
+      border: 1px solid var(--color-error);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      color: var(--color-error);
+      font-size: var(--text-sm);
+      text-align: center;
+      margin-top: var(--space-4);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="topnav" aria-label="Navigasi utama">
+      <a href="index.html" class="nav-brand" aria-label="Pantau Jalan beranda">
+        <div class="logo-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h3l-1 5 2 5-2 5 1 5H7L6 17l1-5-1-5 1-5Z"/><path d="M14 2h3l-1 5 2 5-2 5 1 5h-3l-1-5 1-5-1-5 1-5Z"/></svg>
+        </div>
+        Pantau Jalan
+      </a>
+      <div class="nav-links">
+        <a href="index.html"><span class="label">Dashboard</span></a>
+        <a href="peta.html"><span class="label">Peta</span></a>
+        <a href="laporan.html"><span class="label">Kirim Laporan</span></a>
+        <a href="cek-status.html" class="active"><span class="label">Cek Status</span></a>
+        <a href="admin.html"><span class="label">Admin / Petugas</span></a>
+      </div>
+      <div class="nav-end">
+        <div id="nav-user-badge"></div>
+        <button class="theme-toggle" data-theme-toggle aria-label="Ganti tema">🌙</button>
+      </div>
+    </nav>
+
+    <main class="page-content">
+    <div class="cek-wrap">
+      <div class="cek-card">
+        <div class="cek-header">
+          <div class="cek-icon">🎫</div>
+          <h1>Cek Status Laporan</h1>
+          <p>Masukkan kode tiket yang kamu terima saat mengirim laporan untuk melihat status terkini.</p>
+        </div>
+
+        <div class="input-group">
+          <input
+            type="text"
+            id="kode-input"
+            placeholder="Contoh: KJR-202604-0001"
+            maxlength="16"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="btn btn-primary" id="cek-btn" onclick="cekStatus()">Cek</button>
+        </div>
+        <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2);">
+          Format kode: <strong>KJR-YYYYMM-XXXX</strong> (contoh: KJR-202604-0001)
+        </p>
+
+        <div id="error-msg" class="error-msg"></div>
+
+        <div id="result"></div>
+      </div>
+
+      <p style="text-align:center;margin-top:var(--space-6);font-size:var(--text-sm);color:var(--color-text-muted);">
+        Belum punya kode tiket? <a href="laporan.html" style="color:var(--color-primary);">Buat laporan baru →</a>
+      </p>
+    </div>
+  </main>
+
+  <script src="assets/store.js"></script>
+  <script src="assets/utils.js"></script>
+  <script>
+
+    const statusMeta = {
+      pending:     { icon: '⏳', label: 'Menunggu Verifikasi',  color: 'var(--color-warning)'  },
+      dilaporkan:  { icon: '📋', label: 'Sudah Dilaporkan',     color: 'var(--color-blue)'     },
+      damaged:     { icon: '🔴', label: 'Dikonfirmasi Rusak',   color: 'var(--color-error)'    },
+      in_progress: { icon: '🔧', label: 'Sedang Diperbaiki',    color: 'var(--color-orange)'   },
+      fixed:       { icon: '✅', label: 'Sudah Diperbaiki',     color: 'var(--color-success)'  },
+      reported:    { icon: '📋', label: 'Dilaporkan ke Dinas',  color: 'var(--color-blue)'     },
+      ditolak:     { icon: '❌', label: 'Laporan Ditolak',      color: 'var(--color-error)'    },
+    };
+
+    function formatDate(dt) {
+      if (!dt) return '-';
+      return new Date(dt).toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // Auto-format input jadi uppercase
+    document.getElementById('kode-input').addEventListener('input', function() {
+      const pos = this.selectionStart;
+      this.value = this.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+      this.setSelectionRange(pos, pos);
+    });
+
+    // Enter key submit
+    document.getElementById('kode-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') cekStatus();
+    });
+
+    async function cekStatus() {
+      const kode = document.getElementById('kode-input').value.trim().toUpperCase();
+      const errEl = document.getElementById('error-msg');
+      const resultEl = document.getElementById('result');
+      const btn = document.getElementById('cek-btn');
+
+      errEl.style.display = 'none';
+      resultEl.style.display = 'none';
+
+      if (!kode) {
+        errEl.textContent = 'Kode tiket tidak boleh kosong.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      if (!/^KJR-\d{6}-\d{4}$/.test(kode)) {
+        errEl.textContent = 'Format kode tidak valid. Gunakan format KJR-YYYYMM-XXXX (contoh: KJR-202604-0001)';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Mencari...';
+
+      try {
+        const isOnline = location.protocol !== 'file:';
+        if (!isOnline) throw new Error('Mode offline tidak mendukung cek tiket. Buka via localhost.');
+
+        const base = location.origin + location.pathname.replace(/\/[^/]*$/, '');
+        const res  = await fetch(`${base}/api/cek_tiket.php?kode=${encodeURIComponent(kode)}`, {
+          credentials: 'include'
+        });
+        const json = await res.json();
+
+        if (!json.success) throw new Error(json.message);
+
+        renderResult(json.data);
+      } catch(e) {
+        errEl.textContent = e.message || 'Laporan tidak ditemukan.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Cek';
+      }
+    }
+
+    function renderResult(d) {
+      const meta    = statusMeta[d.status] || { icon: '⚪', label: d.status, color: '#7a7974' };
+      const history = Array.isArray(d.history) ? d.history : [];
+
+      const timelineHTML = history.map(h => {
+        const hMeta = statusMeta[h.status] || { icon: '⚪', label: h.status };
+        return `
+          <div class="tl-item">
+            <div class="tl-dot">${hMeta.icon}</div>
+            <div class="tl-content">
+              <strong>${hMeta.label}</strong>
+              <small>${h.note || ''} · ${h.actor || ''} · ${formatDate(h.timestamp)}</small>
+            </div>
+          </div>`;
+      }).join('');
+
+      const rejectionHTML = d.status === 'ditolak' && d.rejection_reason
+        ? `<div class="rejection-box">
+            <strong>❌ Alasan Penolakan</strong>
+            ${d.rejection_reason}
+           </div>` : '';
+
+      const resultEl = document.getElementById('result');
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `
+        <div class="result-card">
+          <div class="result-header">
+            <div>
+              <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:4px;">Kode Tiket</p>
+              <strong style="font-size:var(--text-lg);color:var(--color-primary);letter-spacing:.05em;">${d.ticket_code}</strong>
+            </div>
+            <span class="badge ${d.status}">${meta.icon} ${meta.label}</span>
+          </div>
+          <div class="result-body">
+            <div class="result-meta">
+              <div class="result-meta-row">
+                <span class="label">📍 Nama Jalan</span>
+                <span class="value">${d.road_name}</span>
+              </div>
+              <div class="result-meta-row">
+                <span class="label">👤 Pelapor</span>
+                <span class="value">${d.reporter || 'Anonim'}</span>
+              </div>
+              <div class="result-meta-row">
+                <span class="label">📅 Dilaporkan</span>
+                <span class="value">${formatDate(d.created_at)}</span>
+              </div>
+              <div class="result-meta-row">
+                <span class="label">🔄 Diperbarui</span>
+                <span class="value">${formatDate(d.updated_at)}</span>
+              </div>
+            </div>
+
+            ${rejectionHTML}
+
+            ${history.length > 0 ? `
+            <div style="margin-top:var(--space-5);">
+              <p style="font-size:var(--text-sm);font-weight:700;margin-bottom:var(--space-4);">Riwayat Status</p>
+              <div class="timeline">${timelineHTML}</div>
+            </div>` : ''}
+
+            <div style="margin-top:var(--space-5);display:flex;gap:var(--space-3);flex-wrap:wrap;">
+              <a href="${d.detail_url}" class="btn btn-primary">🔍 Lihat Detail Lengkap</a>
+              <a href="peta.html" class="btn btn-secondary">🗺️ Lihat di Peta</a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Baca kode dari URL query string jika ada (?kode=KJR-...)
+    const urlKode = new URLSearchParams(location.search).get('kode');
+    if (urlKode) {
+      document.getElementById('kode-input').value = urlKode.toUpperCase();
+      cekStatus();
+    }
+  </script>
+    </main>
+  </div>
+</body>
+</html>

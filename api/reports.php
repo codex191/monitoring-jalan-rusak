@@ -187,16 +187,28 @@ $photoUrlsJson = json_encode(array_values($photoUrls));
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
 
-        $now = date('Y-m-d H:i:s'); // Format MySQL DATETIME
+        $now = date('Y-m-d H:i:s');
 
         $db = getDB();
+
+        // Generate kode tiket unik: KJR-YYYYMM-XXXX
+        $prefix = 'KJR-' . date('Ym') . '-';
+        $lastStmt = $db->prepare("SELECT ticket_code FROM reports WHERE ticket_code LIKE :prefix ORDER BY created_at DESC LIMIT 1");
+        $lastStmt->execute([':prefix' => $prefix . '%']);
+        $lastTicket = $lastStmt->fetchColumn();
+        $seq = 1;
+        if ($lastTicket) {
+            $parts = explode('-', $lastTicket);
+            $seq   = intval(end($parts)) + 1;
+        }
+        $ticketCode = $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
 
         // Insert laporan
         $stmt = $db->prepare("
             INSERT INTO reports
-                (id, road_name, description, lat, lng, status, reporter, photo_urls, created_at, updated_at)
+                (id, road_name, description, lat, lng, status, reporter, photo_urls, ticket_code, created_at, updated_at)
             VALUES
-                (:id, :road_name, :description, :lat, :lng, 'pending', :reporter, :photo_urls, :created_at, :updated_at)
+                (:id, :road_name, :description, :lat, :lng, 'pending', :reporter, :photo_urls, :ticket_code, :created_at, :updated_at)
         ");
         $stmt->execute([
     ':id'          => $uuid,
@@ -206,6 +218,7 @@ $photoUrlsJson = json_encode(array_values($photoUrls));
     ':lng'         => $lng,
     ':reporter'    => $reporter,
     ':photo_urls'  => $photoUrlsJson,
+    ':ticket_code' => $ticketCode,
     ':created_at'  => $now,
     ':updated_at'  => $now,
 ]);
@@ -222,7 +235,8 @@ $photoUrlsJson = json_encode(array_values($photoUrls));
 
         http_response_code(201);
         echo json_encode([
-            'success' => true,
+            'success'     => true,
+            'ticket_code' => $ticketCode,
             'message' => 'Laporan berhasil dikirim. Menunggu verifikasi petugas.',
             'id'      => $uuid,
         ]);

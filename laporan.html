@@ -66,6 +66,7 @@
         <a href="index.html"><span class="label">Dashboard</span></a>
         <a href="peta.html"><span class="label">Peta</span></a>
         <a href="laporan.html"><span class="label">Kirim Laporan</span></a>
+        <a href="cek-status.html"><span class="label">Cek Status</span></a>
         <a href="admin.html"><span class="label">Admin / Petugas</span></a>
       </div>
       <div class="nav-end">
@@ -427,8 +428,39 @@ await Api.submitReport({ roadName, description, reporter, lat, lng, photoUrls: p
           updateCounter('roadName', 120);
           updateCounter('description', 500);
           LoadingBtn.stop('submit-btn');
-          Toast.success('Laporan berhasil dikirim! Menunggu verifikasi petugas.', 5000);
-          setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+          // Tampilkan halaman sukses dengan kode tiket & link detail
+          const ticketCode = result.ticket_code || '';
+          const reportId   = result.id || '';
+          const detailUrl  = reportId ? `detail.html?id=${reportId}` : 'index.html';
+          const form = document.getElementById('report-form') || document.querySelector('form');
+          const wrap = form ? form.parentElement : document.querySelector('main');
+          if (wrap) {
+            wrap.innerHTML = `
+              <div style="max-width:560px;margin:var(--space-12) auto;padding:0 var(--space-4);text-align:center;">
+                <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-8);">
+                  <div style="font-size:3rem;margin-bottom:var(--space-4);">✅</div>
+                  <h2 style="font-size:var(--text-xl);font-weight:800;margin-bottom:var(--space-2);">Laporan Berhasil Dikirim!</h2>
+                  <p style="color:var(--color-text-muted);margin-bottom:var(--space-6);">Laporan kamu sedang menunggu verifikasi petugas. Simpan kode tiket berikut untuk memantau status laporan.</p>
+
+                  ${ticketCode ? `
+                  <div style="background:var(--color-primary-highlight);border:2px dashed var(--color-primary);border-radius:var(--radius-lg);padding:var(--space-5);margin-bottom:var(--space-6);">
+                    <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);text-transform:uppercase;letter-spacing:.05em;">Kode Tiket Laporan</p>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-3);">
+                      <strong id="kode-tiket" style="font-size:var(--text-xl);font-weight:900;color:var(--color-primary);letter-spacing:.08em;">${ticketCode}</strong>
+                      <button onclick="navigator.clipboard?.writeText('${ticketCode}').then(()=>Toast.success('Kode tiket disalin!'))" style="background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius-md);padding:6px 12px;font-size:var(--text-xs);cursor:pointer;">Salin</button>
+                    </div>
+                    <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2);">Gunakan kode ini untuk cek status di halaman <strong>Cek Status Laporan</strong></p>
+                  </div>` : ''}
+
+                  <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+                    ${reportId ? `<a href="${detailUrl}" class="btn btn-primary" style="justify-content:center;">🔍 Lihat Detail Laporan</a>` : ''}
+                    <a href="cek-status.html" class="btn btn-secondary" style="justify-content:center;">📋 Cek Status via Kode Tiket</a>
+                    <a href="laporan.html" class="btn btn-secondary" style="justify-content:center;">+ Buat Laporan Baru</a>
+                    <a href="index.html" class="btn btn-secondary" style="justify-content:center;">🏠 Kembali ke Beranda</a>
+                  </div>
+                </div>
+              </div>`;
+          }
         } catch(err) {
           LoadingBtn.stop('submit-btn');
           // Pesan khusus untuk rate limit
